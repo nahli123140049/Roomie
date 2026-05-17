@@ -1,0 +1,56 @@
+package com.example.Roomie.presentation.util
+
+object AppStrings {
+    const val APP_NAME = "Roomie"
+    
+    // Bottom Navigation
+    const val NAV_HOME = "Beranda"
+    const val NAV_FACILITY = "Fasilitas"
+    const val NAV_REPORT = "Lapor"
+    const val NAV_PROFILE = "Profil"
+    
+    // Home Screen
+    const val HOME_TITLE = "Dashboard"
+    const val HOME_GREETING = "Halo, Mulya!"
+    const val HOME_SUB_GREETING = "Mau kuliah di mana hari ini?"
+    const val HOME_SUMMARY = "Ringkasan Laporan"
+    const val HOME_QUICK_ACTION = "Aksi Cepat"
+    const val HOME_REPORT_FAST = "Lapor Cepat"
+    const val HOME_SEARCH_ROOM = "Cari Ruang"
+    const val HOME_SCHEDULE = "Jadwal"
+    const val HOME_HELP = "Bantuan"
+    const val HOME_STATS_TITLE = "Status Aktivitas"
+    const val HOME_RECENT_ACTIVITY = "Aktivitas Terakhir"
+    const val HOME_OPEN_FACILITY = "Cari Ruangan"
+    const val HOME_DETAIL = "Detail"
+    
+    // Profile Screen
+    const val PROFILE_TITLE = "Profil Pengguna"
+    const val PROFILE_STATS = "Statistik Aspirasi"
+    const val PROFILE_HISTORY = "Riwayat Laporan"
+    const val PROFILE_TOTAL = "Total"
+    const val PROFILE_PROCESSED = "Diproses"
+    const val PROFILE_COMPLETED = "Selesai"
+    
+    // Report Screen
+    const val REPORT_TITLE = "Lapor Kerusakan"
+    const val REPORT_CATEGORY = "Kategori Fasilitas"
+    const val REPORT_LOCATION = "Lokasi Spesifik"
+    const val REPORT_DESCRIPTION = "Deskripsi Kerusakan"
+    const val REPORT_URGENCY = "Tingkat Urgensi"
+    const val REPORT_SUBMIT = "Kirim Laporan"
+    const val REPORT_PHOTO = "Upload Foto Bukti"
+    const val REPORT_SUCCESS_TITLE = "Laporan Terkirim"
+    const val REPORT_SUCCESS_MSG = "Terima kasih, laporan Anda telah kami terima."
+    
+    // Facility Detail
+    const val FACILITY_DETAIL_TITLE = "Detail Fasilitas"
+    
+    // Admin
+    const val ADMIN_DASHBOARD = "Admin Dashboard"
+    const val ADMIN_MANAGE_REPORTS = "Kelola Laporan"
+    const val ADMIN_MANAGE_ROOMS = "Kontrol Ruangan"
+    const val ADMIN_UPDATE_STATUS = "Update Status"
+    const val ADMIN_STATS_REPORTS = "Total Laporan Masuk"
+    const val ADMIN_STATS_ACTIVE_ROOMS = "Ruangan Aktif"
+}
