@@ -37,7 +37,7 @@ fun HomeScreen(
     onNavigateToReport: () -> Unit,
     onNavigateToAllReports: () -> Unit,
     onNavigateToNotifications: () -> Unit,
-    onNavigateToGlobalCalendar: () -> Unit, // New
+    onNavigateToGlobalCalendar: () -> Unit,
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -207,13 +207,6 @@ fun HomeContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    QuickActionItem(
-                        icon = Icons.Default.AddBusiness,
-                        label = AppStrings.HOME_REPORT_FAST,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToReport
-                    )
                     QuickActionItem(
                         icon = Icons.Default.Search,
                         label = AppStrings.HOME_SEARCH_ROOM,
