@@ -39,6 +39,23 @@ class FakeBookingRepository : BookingRepository {
             it.startTime < endTime && startTime < it.endTime
         }
     }
+
+    override suspend fun getServerTime(): Long {
+        return kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+    }
+
+    override suspend fun cleanupExpiredBookings(serverTime: Long): Int {
+        val all = _bookings.value
+        val expired = all.filter { it.status == BookingStatus.APPROVED && it.endTime < serverTime }
+        _bookings.update { current ->
+            current.map { 
+                if (it.status == BookingStatus.APPROVED && it.endTime < serverTime) 
+                    it.copy(status = BookingStatus.COMPLETED) 
+                else it 
+            }
+        }
+        return expired.size
+    }
     
     fun setBookings(bookings: List<Booking>) {
         _bookings.value = bookings

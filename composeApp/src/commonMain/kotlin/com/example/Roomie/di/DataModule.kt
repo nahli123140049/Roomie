@@ -7,11 +7,24 @@ import com.example.Roomie.data.local.datastore.UserPreferences
 import com.example.Roomie.data.local.datastore.create
 import com.example.Roomie.data.repository.*
 import com.example.Roomie.domain.repository.*
+import io.ktor.client.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val dataModule = module {
+    // Network
+    single {
+        HttpClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+    }
+
     // Local Data (DataStore)
     single { get<DataStoreFactory>().create() }
     singleOf(::UserPreferences)

@@ -4,16 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.Roomie.domain.model.Report
 import com.example.Roomie.domain.model.ReportStatus
-import com.example.Roomie.domain.usecase.GetAllReportsUseCase
-import com.example.Roomie.domain.usecase.GetCurrentUserUseCase
-import com.example.Roomie.domain.usecase.GetAllAnnouncementsUseCase
+import com.example.Roomie.domain.usecase.*
 import com.example.Roomie.data.repository.ReportRepositoryImpl
 import com.example.Roomie.domain.repository.ReportRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 sealed interface HomeUiState {
@@ -31,12 +25,18 @@ class HomeViewModel(
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val getAllReportsUseCase: GetAllReportsUseCase,
     private val getAllAnnouncementsUseCase: GetAllAnnouncementsUseCase,
+    private val performAutomaticCleanupUseCase: PerformAutomaticCleanupUseCase,
     private val reportRepository: ReportRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            // Run automatic cleanup of expired bookings on startup
+            performAutomaticCleanupUseCase()
+        }
+
         // Seed initial reports if local
         (reportRepository as? ReportRepositoryImpl)?.let {
             viewModelScope.launch {

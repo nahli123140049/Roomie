@@ -49,6 +49,8 @@ class KoinModuleTest : KoinTest {
                     override suspend fun updateBookingStatus(id: String, status: com.example.Roomie.domain.model.BookingStatus) = Result.success(Unit)
                     override suspend fun deleteBooking(id: String) = Result.success(Unit)
                     override suspend fun checkConflict(roomId: String, startTime: Long, endTime: Long) = false
+                    override suspend fun getServerTime(): Long = 0L
+                    override suspend fun cleanupExpiredBookings(serverTime: Long): Int = 0
                 }
             }
             single<NotificationRepository> {
