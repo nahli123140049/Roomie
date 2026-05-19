@@ -33,7 +33,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FacilityGridScreen(
-    onNavigateToDetail: (String) -> Unit,
+    onNavigateToDetail: (String, String) -> Unit, // Updated with date
     onNavigateToMultiBooking: (List<String>) -> Unit,
     onBack: () -> Unit,
     viewModel: FacilityViewModel = koinViewModel(),
@@ -167,7 +167,7 @@ fun FacilityGridScreen(
                                             selectedRooms = if (isSelected) selectedRooms - room.id else selectedRooms + room.id
                                         }
                                     } else {
-                                        onNavigateToDetail(room.id)
+                                        onNavigateToDetail(room.id, state.selectedDate.toString())
                                     }
                                 }
                             )

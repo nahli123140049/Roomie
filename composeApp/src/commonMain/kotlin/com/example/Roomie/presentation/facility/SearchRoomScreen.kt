@@ -15,17 +15,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.Roomie.domain.model.Room
 import com.example.Roomie.domain.model.RoomStatus
+import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchRoomScreen(
     onBack: () -> Unit,
-    onNavigateToDetail: (String) -> Unit,
+    onNavigateToDetail: (String, String) -> Unit, // Updated with date
     viewModel: SearchRoomViewModel = koinViewModel()
 ) {
     val query by viewModel.searchQuery.collectAsState()
     val results by viewModel.searchResults.collectAsState()
+    val today = remember { 
+        val now = kotlinx.datetime.Clock.System.now()
+        val local = now.toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+        local.date.toString()
+    }
 
     Scaffold(
         topBar = {
@@ -74,7 +80,7 @@ fun SearchRoomScreen(
                 items(results) { room ->
                     SearchResultItem(
                         room = room,
-                        onClick = { onNavigateToDetail(room.id) }
+                        onClick = { onNavigateToDetail(room.id, today) }
                     )
                 }
             }
