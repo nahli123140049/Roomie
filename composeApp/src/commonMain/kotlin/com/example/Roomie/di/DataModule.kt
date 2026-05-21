@@ -33,7 +33,7 @@ val dataModule = module {
     single { RoomieDatabase(get<DatabaseDriverFactory>().createDriver()) }
     
     // Repositories
-    singleOf(::AuthRepositoryImpl) bind AuthRepository::class
+    singleOf(::SupabaseAuthRepositoryImpl) bind AuthRepository::class
     singleOf(::SupabaseBookingRepositoryImpl) bind BookingRepository::class
     singleOf(::SupabaseReportRepositoryImpl) bind ReportRepository::class
     singleOf(::SupabaseFacilityRepositoryImpl) bind FacilityRepository::class
