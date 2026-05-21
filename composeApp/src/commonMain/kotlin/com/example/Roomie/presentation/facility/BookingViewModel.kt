@@ -7,6 +7,7 @@ import com.example.Roomie.domain.model.BookingStatus
 import com.example.Roomie.domain.model.Room
 import com.example.Roomie.domain.repository.BookingRepository
 import com.example.Roomie.domain.repository.FacilityRepository
+import com.example.Roomie.domain.usecase.GetCurrentUserUseCase
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.*
@@ -32,7 +33,8 @@ data class BookingFormState(
 
 class BookingViewModel(
     private val bookingRepository: BookingRepository,
-    private val facilityRepository: FacilityRepository
+    private val facilityRepository: FacilityRepository,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BookingFormState())
@@ -79,7 +81,7 @@ class BookingViewModel(
                 val endMs = LocalDateTime(localDate, endLt).toInstant(tz).toEpochMilliseconds()
                 val nowMs = Clock.System.now().toEpochMilliseconds()
 
-                // --- SMART VALIDATION (MULYA'S LOGIC) ---
+                // --- SMART VALIDATION ---
                 
                 if (startMs < nowMs) {
                     _state.update { it.copy(isLoading = false, error = "Waktu peminjaman sudah lewat!") }
@@ -104,6 +106,7 @@ class BookingViewModel(
                 }
 
                 // --- EXECUTION ---
+                val currentUser = getCurrentUserUseCase().first()
                 var anyConflict = false
                 currentState.rooms.forEach { room ->
                     val newBooking = Booking(
@@ -114,7 +117,8 @@ class BookingViewModel(
                         startTime = startMs,
                         endTime = endMs,
                         status = BookingStatus.PENDING,
-                        subject = currentState.purpose
+                        subject = currentState.purpose,
+                        userId = currentUser?.id
                     )
                     val result = bookingRepository.addBooking(newBooking)
                     if (result.isFailure) anyConflict = true

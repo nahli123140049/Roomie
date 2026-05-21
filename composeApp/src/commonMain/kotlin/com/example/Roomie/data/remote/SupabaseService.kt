@@ -5,13 +5,18 @@ import io.github.jan.supabase.storage.storage
 import io.github.aakira.napier.Napier
 import kotlinx.datetime.Clock
 
-class SupabaseService(
+interface SupabaseService {
+    suspend fun uploadReportImage(imageBytes: ByteArray): String?
+    suspend fun uploadAvatar(imageBytes: ByteArray): String?
+}
+
+class SupabaseServiceImpl(
     private val client: SupabaseClient
-) {
+) : SupabaseService {
     /**
      * Upload image to specified bucket
      */
-    suspend fun uploadImage(bucketName: String, folderName: String, imageBytes: ByteArray): String? {
+    private suspend fun uploadImage(bucketName: String, folderName: String, imageBytes: ByteArray): String? {
         return try {
             val fileName = "$folderName/${Clock.System.now().toEpochMilliseconds()}.jpg"
             val bucket = client.storage.from(bucketName)
@@ -29,9 +34,9 @@ class SupabaseService(
         }
     }
 
-    suspend fun uploadReportImage(imageBytes: ByteArray): String? = 
+    override suspend fun uploadReportImage(imageBytes: ByteArray): String? = 
         uploadImage("roomie-images", "reports", imageBytes)
 
-    suspend fun uploadAvatar(imageBytes: ByteArray): String? = 
+    override suspend fun uploadAvatar(imageBytes: ByteArray): String? =
         uploadImage("roomie-images", "avatars", imageBytes)
 }

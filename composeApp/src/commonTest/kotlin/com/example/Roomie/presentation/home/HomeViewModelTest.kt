@@ -1,5 +1,9 @@
 package com.example.Roomie.presentation.home
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
+import com.example.Roomie.data.local.datastore.UserPreferences
 import com.example.Roomie.data.repository.FakeAnnouncementRepository
 import com.example.Roomie.data.repository.FakeAuthRepository
 import com.example.Roomie.data.repository.FakeBookingRepository
@@ -13,6 +17,7 @@ import com.example.Roomie.domain.usecase.GetCurrentUserUseCase
 import com.example.Roomie.domain.usecase.PerformAutomaticCleanupUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -29,6 +34,7 @@ class HomeViewModelTest {
     private lateinit var authRepository: FakeAuthRepository
     private lateinit var announcementRepository: FakeAnnouncementRepository
     private lateinit var bookingRepository: FakeBookingRepository
+    private lateinit var userPreferences: UserPreferences
     private lateinit var viewModel: HomeViewModel
     private val testDispatcher = StandardTestDispatcher()
 
@@ -40,12 +46,19 @@ class HomeViewModelTest {
         announcementRepository = FakeAnnouncementRepository()
         bookingRepository = FakeBookingRepository()
         
+        val mockDataStore = object : DataStore<Preferences> {
+            override val data = flowOf(emptyPreferences())
+            override suspend fun updateData(transform: suspend (Preferences) -> Preferences) = emptyPreferences()
+        }
+        userPreferences = UserPreferences(mockDataStore)
+        
         viewModel = HomeViewModel(
             getCurrentUserUseCase = GetCurrentUserUseCase(authRepository),
             getAllReportsUseCase = GetAllReportsUseCase(reportRepository),
             getAllAnnouncementsUseCase = GetAllAnnouncementsUseCase(announcementRepository),
             performAutomaticCleanupUseCase = PerformAutomaticCleanupUseCase(bookingRepository),
-            reportRepository = reportRepository
+            reportRepository = reportRepository,
+            userPreferences = userPreferences
         )
     }
 

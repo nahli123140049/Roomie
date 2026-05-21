@@ -63,11 +63,14 @@ class KoinModuleTest : KoinTest {
             single<SupabaseClient> { 
                 createSupabaseClient("https://fake.com", "fake") {}
             }
-            single { SupabaseService(get()) }
+            single<SupabaseService> { 
+                object : SupabaseService {
+                    override suspend fun uploadReportImage(imageBytes: ByteArray): String? = null
+                    override suspend fun uploadAvatar(imageBytes: ByteArray): String? = null
+                }
+            }
             // Add UserPreferences mock
             single<UserPreferences> { 
-                // We use a simple object because UserPreferences needs a DataStore
-                // For Koin check, we just need the type to be available
                 val mockDataStore = object : androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> {
                     override val data = flowOf(androidx.datastore.preferences.core.emptyPreferences())
                     override suspend fun updateData(transform: suspend (androidx.datastore.preferences.core.Preferences) -> androidx.datastore.preferences.core.Preferences) = androidx.datastore.preferences.core.emptyPreferences()
