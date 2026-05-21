@@ -40,6 +40,14 @@ class SupabaseBookingRepositoryImpl(
 
     override suspend fun addBooking(booking: Booking): Result<Unit> {
         return try {
+            // 🛡️ CLOUD CONFLICT GUARD (MULYA'S LOGIC)
+            // 1. Check if there's any approved booking in Cloud that overlaps this time
+            val isConflict = checkConflict(booking.roomId, booking.startTime, booking.endTime)
+            if (isConflict) {
+                return Result.failure(Exception("Waduh, telat Bre! Ruangan ini baru aja di-book orang lain."))
+            }
+
+            // 2. No conflict? Proceed to insert
             client.postgrest["bookings"].insert(booking.toDto())
             Result.success(Unit)
         } catch (e: Exception) {
@@ -71,15 +79,19 @@ class SupabaseBookingRepositoryImpl(
 
     override suspend fun checkConflict(roomId: String, startTime: Long, endTime: Long): Boolean {
         return try {
-            val bookings = client.postgrest["bookings"].select {
+            // Fetch only APPROVED bookings for this specific room from Cloud
+            val response = client.postgrest["bookings"].select {
                 filter {
                     eq("room_id", roomId)
                     eq("status", BookingStatus.APPROVED.name)
                 }
-            }.decodeList<BookingDto>()
+            }
+            val approvedBookings = response.decodeList<BookingDto>()
             
-            bookings.any { it.start_time < endTime && startTime < it.end_time }
+            // Logic Overlap: (StartA < EndB) AND (EndA > StartB)
+            approvedBookings.any { it.start_time < endTime && it.end_time > startTime }
         } catch (e: Exception) {
+            // If network fails, better be safe and return false (or handle accordingly)
             false
         }
     }
