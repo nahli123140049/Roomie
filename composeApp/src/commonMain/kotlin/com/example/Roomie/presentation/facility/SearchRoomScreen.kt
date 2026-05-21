@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.Roomie.domain.model.Room
 import com.example.Roomie.domain.model.RoomStatus
 import kotlinx.datetime.toLocalDateTime
@@ -40,6 +39,16 @@ fun SearchRoomScreen(
         val local = now.toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
         local.date.toString()
     }
+
+    var expanded by remember { mutableStateOf(false) }
+    val capacityOptions = listOf(
+        Triple(0, 1000, "Semua Kapasitas"),
+        Triple(35, 40, "35 - 40 Kursi"),
+        Triple(41, 50, "41 - 50 Kursi"),
+        Triple(51, 60, "51 - 60 Kursi"),
+        Triple(61, 1000, "> 60 Kursi")
+    )
+    val selectedOption = capacityOptions.find { it.first == minCap && it.second == maxCap } ?: capacityOptions[0]
 
     Scaffold(
         topBar = {
@@ -76,43 +85,42 @@ fun SearchRoomScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // Capacity Filter Chips (Nahli's UI Design)
+            // Capacity Filter Dropdown (Nahli's Clean Design)
             Surface(
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(bottom = 12.dp)) {
-                    Text(
-                        "Filter Kapasitas Kursi", 
-                        style = MaterialTheme.typography.labelSmall, 
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Column(Modifier.padding(16.dp)) {
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
                     ) {
-                        CapacityFilterChip(
-                            label = "Semua", 
-                            selected = minCap == 0 && maxCap > 100, 
-                            onClick = { viewModel.onCapacityFilterChange(0, 1000) }
+                        OutlinedTextField(
+                            value = selectedOption.third,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Kapasitas Ruangan") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            leadingIcon = { Icon(Icons.Default.People, null, tint = MaterialTheme.colorScheme.primary) },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
                         )
-                        CapacityFilterChip(
-                            label = "35-40", 
-                            selected = minCap == 35 && maxCap == 40, 
-                            onClick = { viewModel.onCapacityFilterChange(35, 40) }
-                        )
-                        CapacityFilterChip(
-                            label = "41-50", 
-                            selected = minCap == 41 && maxCap == 50, 
-                            onClick = { viewModel.onCapacityFilterChange(41, 50) }
-                        )
-                        CapacityFilterChip(
-                            label = "51-60", 
-                            selected = minCap == 51, 
-                            onClick = { viewModel.onCapacityFilterChange(51, 1000) }
-                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            capacityOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option.third) },
+                                    onClick = {
+                                        viewModel.onCapacityFilterChange(option.first, option.second)
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -140,20 +148,6 @@ fun SearchRoomScreen(
 }
 
 @Composable
-fun CapacityFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
-        shape = RoundedCornerShape(20.dp),
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-            selectedLabelColor = MaterialTheme.colorScheme.primary
-        )
-    )
-}
-
-@Composable
 fun SearchResultItem(room: Room, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
@@ -166,7 +160,6 @@ fun SearchResultItem(room: Room, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Lantai ${room.floor} - GKU 2")
                     Spacer(Modifier.width(8.dp))
-                    // Capacity Badge (Nahli's UI Touch)
                     Surface(
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(4.dp)

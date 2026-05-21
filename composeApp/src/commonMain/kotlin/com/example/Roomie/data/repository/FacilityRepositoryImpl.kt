@@ -139,7 +139,7 @@ class FacilityRepositoryImpl(
                     floor = 1L,
                     status = RoomStatus.AVAILABLE.name,
                     type = RoomType.REGULAR.name,
-                    capacity = 40L,
+                    capacity = 45L,
                     hasAc = 1L,
                     hasProjector = 1L,
                     borrowerName = null,
@@ -154,14 +154,14 @@ class FacilityRepositoryImpl(
                     floor = 1L,
                     status = RoomStatus.MAINTENANCE.name,
                     type = RoomType.REGULAR.name,
-                    capacity = 30L,
+                    capacity = 35L,
                     hasAc = 1L,
                     hasProjector = 0L,
                     borrowerName = null,
                     maintenanceDescription = "Upgrade Komputer"
                 )
 
-                // Seed GKU2 Rooms with VARYING CAPACITIES (Mulya's Logic)
+                // Seed GKU2 Rooms with VARYING CAPACITIES (35-60)
                 for (f in 1..3) {
                     for (i in 1..25) {
                         val roomNum = f * 100 + i
@@ -171,13 +171,8 @@ class FacilityRepositoryImpl(
                             else -> RoomStatus.AVAILABLE
                         }
                         
-                        // VARIATION LOGIC: Mix capacities 35-60
-                        val variedCapacity = when {
-                            roomNum % 5 == 0 -> 60L
-                            roomNum % 3 == 0 -> 45L
-                            roomNum % 2 == 0 -> 35L
-                            else -> 40L
-                        }
+                        // New Variation Logic: pseudo-random between 35 and 60
+                        val variedCapacity = 35L + (roomNum % 26L)
 
                         queries.insertRoom(
                             id = "GKU2-$roomNum",
@@ -196,7 +191,7 @@ class FacilityRepositoryImpl(
                 }
                 for (i in 1..20) {
                     val roomNum = 400 + i
-                    val variedCapacity = if (i % 2 == 0) 50L else 35L
+                    val variedCapacity = 35L + ((roomNum * 3) % 26L)
                     queries.insertRoom(
                         id = "GKU2-$roomNum",
                         buildingId = "GKU2",
