@@ -2,6 +2,7 @@ package com.example.Roomie.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.Roomie.data.local.datastore.UserPreferences
 import com.example.Roomie.domain.model.Report
 import com.example.Roomie.domain.model.ReportStatus
 import com.example.Roomie.domain.usecase.*
@@ -14,6 +15,7 @@ sealed interface HomeUiState {
     data object Loading : HomeUiState
     data class Success(
         val userName: String,
+        val userAvatar: String?,
         val reportCountInProgress: Int,
         val recentReports: List<Report>,
         val banners: List<String>
@@ -26,18 +28,17 @@ class HomeViewModel(
     private val getAllReportsUseCase: GetAllReportsUseCase,
     private val getAllAnnouncementsUseCase: GetAllAnnouncementsUseCase,
     private val performAutomaticCleanupUseCase: PerformAutomaticCleanupUseCase,
-    private val reportRepository: ReportRepository
+    private val reportRepository: ReportRepository,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            // Run automatic cleanup of expired bookings on startup
             performAutomaticCleanupUseCase()
         }
-
-        // Seed initial reports if local
+        
         (reportRepository as? ReportRepositoryImpl)?.let {
             viewModelScope.launch {
                 it.seedDummyReports()
@@ -53,8 +54,9 @@ class HomeViewModel(
             combine(
                 getCurrentUserUseCase(),
                 getAllReportsUseCase(),
-                getAllAnnouncementsUseCase()
-            ) { user, reports, announcements ->
+                getAllAnnouncementsUseCase(),
+                userPreferences.userAvatar
+            ) { user, reports, announcements, avatar ->
                 val banners = if (announcements.isEmpty()) {
                     listOf("Selamat datang di Roomie ITERA!")
                 } else {
@@ -63,6 +65,7 @@ class HomeViewModel(
 
                 HomeUiState.Success(
                     userName = user?.name ?: "User",
+                    userAvatar = avatar,
                     reportCountInProgress = reports.count { it.status == ReportStatus.IN_PROGRESS },
                     recentReports = reports.takeLast(3).reversed(),
                     banners = banners
