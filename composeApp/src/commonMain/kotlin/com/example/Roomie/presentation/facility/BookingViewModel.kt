@@ -9,16 +9,10 @@ import com.example.Roomie.domain.repository.BookingRepository
 import com.example.Roomie.domain.repository.FacilityRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.LocalTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toInstant
+import kotlinx.datetime.*
 
 data class BookingFormState(
-    val rooms: List<Room> = emptyList(), // Changed to List for Multi-Room
+    val rooms: List<Room> = emptyList(),
     val date: String = "",
     val startTime: String = "",
     val endTime: String = "",
@@ -26,7 +20,7 @@ data class BookingFormState(
     val attendees: String = "",
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
-    val hasPendingBooking: Boolean = false, // Harmony-style Limit
+    val hasPendingBooking: Boolean = false,
     val error: String? = null
 ) {
     val isSubmitEnabled: Boolean get() = date.isNotBlank() && 
@@ -46,7 +40,6 @@ class BookingViewModel(
 
     fun loadRooms(roomIds: List<String>) {
         viewModelScope.launch {
-            // Check for pending bookings first (Harmony-style)
             bookingRepository.getAllBookings().first().let { bookings ->
                 val hasPending = bookings.any { it.status == BookingStatus.PENDING }
                 _state.update { it.copy(hasPendingBooking = hasPending) }
@@ -84,8 +77,33 @@ class BookingViewModel(
                 
                 val startMs = LocalDateTime(localDate, startLt).toInstant(tz).toEpochMilliseconds()
                 val endMs = LocalDateTime(localDate, endLt).toInstant(tz).toEpochMilliseconds()
+                val nowMs = Clock.System.now().toEpochMilliseconds()
 
-                // Create individual bookings for each selected room
+                // --- SMART VALIDATION (MULYA'S LOGIC) ---
+                
+                if (startMs < nowMs) {
+                    _state.update { it.copy(isLoading = false, error = "Waktu peminjaman sudah lewat!") }
+                    return@launch
+                }
+
+                if (startLt.hour < 6 || endLt.hour > 22 || (endLt.hour == 22 && endLt.minute > 0)) {
+                    _state.update { it.copy(isLoading = false, error = "Peminjaman hanya tersedia pukul 06:00 - 22:00 WIB") }
+                    return@launch
+                }
+
+                val durationHours = (endMs - startMs) / 3600000.0
+                if (durationHours <= 0) {
+                    _state.update { it.copy(isLoading = false, error = "Waktu selesai harus setelah waktu mulai") }
+                    return@launch
+                }
+
+                val daysFromNow = (startMs - nowMs) / 86400000
+                if (daysFromNow > 30) {
+                    _state.update { it.copy(isLoading = false, error = "Booking maksimal dilakukan 30 hari sebelumnya") }
+                    return@launch
+                }
+
+                // --- EXECUTION ---
                 var anyConflict = false
                 currentState.rooms.forEach { room ->
                     val newBooking = Booking(

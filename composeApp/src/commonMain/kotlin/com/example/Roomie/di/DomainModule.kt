@@ -14,6 +14,7 @@ val domainModule = module {
     factoryOf(::GetBuildingsUseCase)
     factoryOf(::GetRoomsByBuildingUseCase)
     factoryOf(::SearchRoomsUseCase)
+    factoryOf(::SearchRoomsFilteredUseCase)
     factoryOf(::GetRoomByIdUseCase)
     factoryOf(::UpdateRoomStatusUseCase)
     
