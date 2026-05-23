@@ -1,9 +1,11 @@
 package com.example.Roomie.presentation.admin
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -33,7 +35,7 @@ fun AdminDashboardScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Laporan", "Approval", "Kontrol")
+    val tabs = listOf("Laporan", "Approval", "Kontrol", "History")
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -66,7 +68,7 @@ fun AdminDashboardScreen(
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text(title, fontWeight = FontWeight.Bold) }
+                        text = { Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall) }
                     )
                 }
             }
@@ -82,20 +84,79 @@ fun AdminDashboardScreen(
                             1 -> ApprovalTab(state, viewModel, onActionSuccess = { msg ->
                                 scope.launch { snackbarHostState.showSnackbar(msg) }
                             })
-                            else -> SystemControlTab(
-                                state = state,
-                                viewModel = viewModel,
-                                onActionSuccess = { message ->
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(message)
-                                    }
-                                }
-                            )
+                            2 -> SystemControlTab(state, viewModel, onActionSuccess = { message ->
+                                scope.launch { snackbarHostState.showSnackbar(message) }
+                            })
+                            3 -> HistoryTab(state)
                         }
                     }
                     is AdminUiState.Error -> Text(state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun HistoryTab(state: AdminUiState.Success) {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Log Audit & Transparansi Penggunaan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(16.dp))
+        
+        if (state.auditLogs.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Belum ada riwayat aktivitas", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(state.auditLogs) { log ->
+                    AuditLogItem(log)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AuditLogItem(log: AuditLog) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            val icon = when {
+                log.action.contains("APPROVED") -> Icons.Default.CheckCircle
+                log.action.contains("MAINTENANCE") -> Icons.Default.Build
+                else -> Icons.Default.History
+            }
+            val color = when {
+                log.action.contains("APPROVED") -> Color(0xFF4CAF50)
+                log.action.contains("MAINTENANCE") -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.error
+            }
+
+            Box(
+                modifier = Modifier.size(40.dp).clip(CircleShape).background(color.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = color, modifier = Modifier.size(24.dp))
+            }
+            
+            Spacer(Modifier.width(16.dp))
+            
+            Column(Modifier.weight(1f)) {
+                Text("Ruang ${log.roomName}", fontWeight = FontWeight.Bold)
+                Text("Oleh: ${log.userName} (${log.userId})", style = MaterialTheme.typography.bodySmall)
+                log.details?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+            
+            Text(
+                text = log.action,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = color
+            )
         }
     }
 }
@@ -145,7 +206,7 @@ fun ApprovalTab(state: AdminUiState.Success, viewModel: AdminViewModel, onAction
                                 Button(
                                     onClick = { 
                                         viewModel.approveBooking(booking)
-                                        onActionSuccess("Peminjaman disetujui & Status Ruang diupdate")
+                                        onActionSuccess("Peminjaman disetujui & Log tercatat")
                                     },
                                     modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),

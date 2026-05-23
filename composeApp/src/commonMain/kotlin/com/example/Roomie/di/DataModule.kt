@@ -37,6 +37,7 @@ val dataModule = module {
     singleOf(::SupabaseBookingRepositoryImpl) bind BookingRepository::class
     singleOf(::SupabaseReportRepositoryImpl) bind ReportRepository::class
     singleOf(::SupabaseFacilityRepositoryImpl) bind FacilityRepository::class
+    singleOf(::SupabaseAuditRepositoryImpl) bind AuditRepository::class
     singleOf(::AnnouncementRepositoryImpl) bind AnnouncementRepository::class
     singleOf(::NotificationRepositoryImpl) bind NotificationRepository::class
 }
