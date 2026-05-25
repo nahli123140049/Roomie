@@ -40,7 +40,7 @@ class AdminViewModel(
     private val updateRoomStatusUseCase: UpdateRoomStatusUseCase,
     private val postAnnouncementUseCase: PostAnnouncementUseCase,
     private val getBuildingsUseCase: GetBuildingsUseCase,
-    private val getRoomsByBuildingUseCase: GetRoomsByBuildingUseCase,
+    private val searchRoomsUseCase: SearchRoomsUseCase,
     private val getAllBookingsUseCase: GetAllBookingsUseCase,
     private val getAuditLogsUseCase: GetAuditLogsUseCase,
     private val addAuditLogUseCase: AddAuditLogUseCase,
@@ -63,7 +63,7 @@ class AdminViewModel(
             combine(
                 getAllReportsUseCase(),
                 getBuildingsUseCase(),
-                getRoomsByBuildingUseCase("GKU2"),
+                searchRoomsUseCase(""),
                 getAllBookingsUseCase(),
                 getAuditLogsUseCase(),
                 _filterState

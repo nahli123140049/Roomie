@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.example.Roomie.domain.model.*
+import kotlinx.datetime.*
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -46,21 +50,17 @@ fun AdminDashboardScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        if (currentView == "OVERVIEW") "DASHBOARD HUB" else currentView,
+                        if (currentView == "OVERVIEW") "COMMAND CENTER" else currentView,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        if (currentView == "OVERVIEW") onBack() else currentView = "OVERVIEW"
-                    }) {
-                        Icon(
-                            if (currentView == "OVERVIEW") Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Close,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    if (currentView != "OVERVIEW") {
+                        IconButton(onClick = { currentView = "OVERVIEW" }) {
+                            Icon(Icons.Default.Close, "Back to Hub", tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -110,76 +110,125 @@ fun AdminDashboardScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminOverviewHub(
     state: AdminUiState.Success,
     onNavigate: (String) -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState()
+    var showFacilitySheet by remember { mutableStateOf(false) }
+    var showReportBreakdown by remember { mutableStateOf(false) }
+
+    // --- ACCURACY LOGIC: REAL-TIME SYNC ---
+    val tz = TimeZone.currentSystemDefault()
+    val now = Clock.System.now()
+    val today = now.toLocalDateTime(tz).date
+    
+    // 1. Calculate Facility Health (Synchronized with Facility menu logic)
+    // A room is considered "Unavailable" if:
+    // - Its status is MAINTENANCE in database
+    // - OR there is an APPROVED booking on TODAY'S date
+    val totalRoomsCount = state.rooms.size.coerceAtLeast(1)
+    
+    val busyRoomIds = state.allBookings
+        .filter { booking ->
+            val bookingDate = Instant.fromEpochMilliseconds(booking.startTime)
+                .toLocalDateTime(tz).date
+            booking.status == BookingStatus.APPROVED && bookingDate == today
+        }
+        .map { it.roomId }
+        .toSet()
+
+    val availableRoomsCount = state.rooms.count { room ->
+        // Mirroring FacilityViewModel logic: 
+        // 1. Maintenance is always unavailable
+        // 2. Otherwise, check if there's a booking TODAY
+        room.status != RoomStatus.MAINTENANCE && !busyRoomIds.contains(room.id)
+    }
+    
+    val facilityHealth = availableRoomsCount.toFloat() / totalRoomsCount
+
+    // 2. Calculate Report Resolution
+    val totalReportsCount = state.allReports.size.coerceAtLeast(1)
+    val solvedReportsCount = state.allReports.count { it.status == ReportStatus.DONE }
+    val reportResolution = solvedReportsCount.toFloat() / totalReportsCount
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // 1. System Health Status
+        // 1. Dual Gauges (Fixed UI: Centered, Better Proportions)
         item {
-            Card(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(32.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("SYSTEM STATUS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(16.dp))
-                    Box(contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(
-                            progress = { 1f },
-                            modifier = Modifier.size(120.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            strokeWidth = 12.dp
-                        )
-                        CircularProgressIndicator(
-                            progress = { 0.85f }, // Mock health data
-                            modifier = Modifier.size(120.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 12.dp,
-                            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
-                        )
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("85%", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
-                            Text("Operational", style = MaterialTheme.typography.labelSmall)
-                        }
+                GaugeCard(
+                    title = "FACILITY HEALTH",
+                    value = "${(facilityHealth * 100).toInt()}%",
+                    progress = facilityHealth,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                    onClick = { showFacilitySheet = true }
+                )
+                GaugeCard(
+                    title = "RESOLVED RATE",
+                    value = "${(reportResolution * 100).toInt()}%",
+                    progress = reportResolution,
+                    color = Color(0xFFB22222), // Itera Red
+                    modifier = Modifier.weight(1f),
+                    onClick = { showReportBreakdown = !showReportBreakdown }
+                )
+            }
+        }
+
+        // Urgency Breakdown (Expandable)
+        if (showReportBreakdown) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                ) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Urgency Breakdown", fontWeight = FontWeight.Bold)
+                        UrgencyItem("High Priority", state.allReports.count { it.urgency == UrgencyLevel.HIGH }, Color(0xFFB22222))
+                        UrgencyItem("Medium Priority", state.allReports.count { it.urgency == UrgencyLevel.MEDIUM }, MaterialTheme.colorScheme.primary)
+                        UrgencyItem("Low Priority", state.allReports.count { it.urgency == UrgencyLevel.LOW }, Color.Gray)
                     }
                 }
             }
         }
 
-        // 2. Menu Grid
+        // 2. Menu Hub
         item {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("MANAGEMENT HUB", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text("MANAGEMENT HUB", fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     HubTile(
-                        title = "Approval",
-                        count = state.filteredBookings.count { it.status == BookingStatus.PENDING }.toString(),
-                        icon = Icons.Default.CheckCircle,
+                        title = "Approvals",
+                        count = state.allBookings.count { it.status == BookingStatus.PENDING }.toString(),
+                        icon = Icons.Default.FactCheck,
                         color = Color(0xFF4CAF50),
                         modifier = Modifier.weight(1f),
                         onClick = { onNavigate("APPROVAL") }
                     )
                     HubTile(
-                        title = "Laporan",
+                        title = "Reports",
                         count = state.pendingCount.toString(),
-                        icon = Icons.Default.Warning,
-                        color = MaterialTheme.colorScheme.error,
+                        icon = Icons.Default.ReportProblem,
+                        color = Color(0xFFB22222),
                         modifier = Modifier.weight(1f),
                         onClick = { onNavigate("LAPORAN") }
                     )
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     HubTile(
-                        title = "System",
-                        count = "PRO",
-                        icon = Icons.Default.SettingsSuggest,
+                        title = "Control",
+                        count = "LIVE",
+                        icon = Icons.Default.Campaign,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
                         onClick = { onNavigate("KONTROL") }
@@ -187,11 +236,156 @@ fun AdminOverviewHub(
                     HubTile(
                         title = "Audit Log",
                         count = state.auditLogs.size.toString(),
-                        icon = Icons.Default.History,
+                        icon = Icons.Default.HistoryEdu,
                         color = Color.Gray,
                         modifier = Modifier.weight(1f),
                         onClick = { onNavigate("HISTORY") }
                     )
+                }
+            }
+        }
+    }
+
+    if (showFacilitySheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showFacilitySheet = false },
+            sheetState = sheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            FacilityStatusContent(state.rooms, state.allBookings)
+        }
+    }
+}
+
+@Composable
+fun GaugeCard(
+    title: String,
+    value: String,
+    progress: Float,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(32.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.03f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.1f))
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(110.dp)) {
+                CircularProgressIndicator(
+                    progress = { 1f },
+                    modifier = Modifier.fillMaxSize(),
+                    color = color.copy(alpha = 0.1f),
+                    strokeWidth = 12.dp
+                )
+                CircularProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxSize(),
+                    color = color,
+                    strokeWidth = 12.dp,
+                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+                Text(
+                    value, 
+                    fontWeight = FontWeight.Black, 
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 24.sp
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                title, 
+                style = MaterialTheme.typography.labelSmall, 
+                fontWeight = FontWeight.ExtraBold, 
+                color = color.copy(alpha = 0.8f),
+                letterSpacing = 1.sp,
+                fontSize = 10.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun UrgencyItem(label: String, count: Int, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(color))
+        Spacer(Modifier.width(12.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Text(count.toString(), fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun FacilityStatusContent(rooms: List<Room>, allBookings: List<Booking>) {
+    val tz = TimeZone.currentSystemDefault()
+    val now = Clock.System.now()
+    val today = now.toLocalDateTime(tz).date
+    
+    // Identify truly busy rooms (Booked today)
+    val currentlyBookedIds = allBookings
+        .filter { booking ->
+            val bookingDate = Instant.fromEpochMilliseconds(booking.startTime)
+                .toLocalDateTime(tz).date
+            booking.status == BookingStatus.APPROVED && bookingDate == today
+        }
+        .map { it.roomId }
+        .toSet()
+
+    val nonAvailable = rooms.filter { room ->
+        room.status == RoomStatus.MAINTENANCE || currentlyBookedIds.contains(room.id)
+    }
+    
+    Column(Modifier.fillMaxWidth().padding(bottom = 40.dp, start = 24.dp, end = 24.dp)) {
+        Text("Status Fasilitas Saat Ini", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+        Text("Daftar ruangan yang sedang digunakan atau dalam perbaikan", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        Spacer(Modifier.height(24.dp))
+        
+        if (nonAvailable.isEmpty()) {
+            Box(Modifier.height(200.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text("Semua ruangan tersedia", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.heightIn(max = 450.dp)) {
+                items(nonAvailable) { room ->
+                    val isInMaintenance = room.status == RoomStatus.MAINTENANCE
+                    val isCurrentlyBooked = currentlyBookedIds.contains(room.id)
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val icon = if (isInMaintenance) Icons.Default.Build else Icons.Default.LockClock
+                        val color = if (isInMaintenance) MaterialTheme.colorScheme.primary else Color(0xFFB22222)
+                        val statusText = if (isInMaintenance) "MAINTENANCE" else "IN USE (BOOKED)"
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(color.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(room.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            Text(statusText, style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
                 }
             }
         }
@@ -209,22 +403,25 @@ fun HubTile(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(140.dp),
+        modifier = modifier.height(130.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.05f)),
         border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.1f))
     ) {
-        Column(Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+        Column(
+            modifier = Modifier.padding(16.dp).fillMaxSize(), 
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Box(
-                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(color.copy(alpha = 0.1f)),
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(color.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+                Icon(icon, null, tint = color, modifier = Modifier.size(24.dp))
             }
-            Column {
-                Text(count, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = color)
-                Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            Spacer(Modifier.height(12.dp))
+            Text(count, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = color)
+            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -270,10 +467,7 @@ fun ApprovalTab(state: AdminUiState.Success, viewModel: AdminViewModel, onAction
                             }
                         }
                         
-                        HorizontalDivider(
-                            modifier = Modifier.alpha(0.1f),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        HorizontalDivider(modifier = Modifier.alpha(0.1f), color = MaterialTheme.colorScheme.onSurface)
                         
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Button(
@@ -305,7 +499,7 @@ fun SystemControlTab(
     var announceMsg by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        Text("System Control", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+        Text("System Broadcast", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
         
         Card(
             shape = RoundedCornerShape(28.dp),
@@ -315,20 +509,20 @@ fun SystemControlTab(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Campaign, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Broadcast Pengumuman", fontWeight = FontWeight.Bold)
+                    Text("Kirim Pengumuman Global", fontWeight = FontWeight.Bold)
                 }
                 
                 OutlinedTextField(
                     value = announceTitle, 
                     onValueChange = { announceTitle = it }, 
-                    label = { Text("Judul") }, 
+                    label = { Text("Judul Pengumuman") }, 
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp)
                 )
                 OutlinedTextField(
                     value = announceMsg, 
                     onValueChange = { announceMsg = it }, 
-                    label = { Text("Pesan") }, 
+                    label = { Text("Isi Pesan") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     minLines = 3
