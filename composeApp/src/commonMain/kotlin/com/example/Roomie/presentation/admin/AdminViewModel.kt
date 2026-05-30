@@ -60,6 +60,7 @@ class AdminViewModel(
         viewModelScope.launch {
             _uiState.value = AdminUiState.Loading
             
+            @Suppress("UNCHECKED_CAST")
             combine(
                 getAllReportsUseCase(),
                 getBuildingsUseCase(),
