@@ -303,7 +303,12 @@ fun App(
                 }
 
                 composable(Screen.AdminDashboard.route) {
-                    AdminDashboardScreen(onBack = { navController.popBackStack() })
+                    AdminDashboardScreen(
+                        onBack = { navController.popBackStack() },
+                        onNavigateToRoomDetail = { roomId, date ->
+                            navController.navigate(Screen.RoomDetail.createRoute(roomId, date))
+                        }
+                    )
                 }
             }
         }

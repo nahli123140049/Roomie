@@ -91,6 +91,8 @@ kotlin {
             implementation("io.github.jan-tennert.supabase:storage-kt:2.6.1")
             implementation("io.github.jan-tennert.supabase:gotrue-kt:2.6.1")
             implementation("io.github.jan-tennert.supabase:realtime-kt:2.6.1")
+            implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
 
             // Peekaboo (Media Picker)
             implementation(libs.peekaboo.ui)
