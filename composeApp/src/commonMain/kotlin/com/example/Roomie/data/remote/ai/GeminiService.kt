@@ -4,6 +4,7 @@ import com.example.Roomie.core.util.AiConfig
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.Json
 
@@ -43,18 +44,26 @@ class GeminiService(
         )
 
         return try {
-            val response: GeminiResponse = client.post(url) {
+            val response = client.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(requestBody)
-            }.body()
+            }
 
-            val jsonString = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
+            if (response.status != HttpStatusCode.OK) {
+                val errorBody = response.bodyAsText()
+                println("Gemini API Error (${response.status}): $errorBody")
+                return null
+            }
+
+            val resultBody: GeminiResponse = response.body()
+            val jsonString = resultBody.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
             if (jsonString != null) {
                 json.decodeFromString<ExtractionResult>(jsonString)
             } else {
                 null
             }
         } catch (e: Exception) {
+            println("Gemini Service Exception: ${e.message}")
             e.printStackTrace()
             null
         }
