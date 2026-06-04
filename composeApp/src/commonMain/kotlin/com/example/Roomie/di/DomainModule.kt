@@ -12,7 +12,7 @@ val domainModule = module {
     factoryOf(::LogoutUseCase)
     
     // AI UseCases
-    factoryOf(::ProcessAICommandUseCase)
+    factory { ProcessAICommandUseCase(get(), get(), get()) }
     
     // Facility UseCases
     factoryOf(::GetBuildingsUseCase)
