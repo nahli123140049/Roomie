@@ -44,8 +44,8 @@ val dataModule = module {
     single { CoroutineScope(Dispatchers.Default + SupervisorJob()) }
     singleOf(::SupabaseAuthRepositoryImpl) bind AuthRepository::class
     single<BookingRepository> { BookingRepositoryImpl(get(), get(), get(), get(), get()) }
-    singleOf(::SupabaseReportRepositoryImpl) bind ReportRepository::class
-    singleOf(::SupabaseFacilityRepositoryImpl) bind FacilityRepository::class
+    single<FacilityRepository> { FacilityRepositoryImpl(get(), get(), get(), get()) }
+    single<ReportRepository> { ReportRepositoryImpl(get(), get(), get(), get()) }
     singleOf(::SupabaseAuditRepositoryImpl) bind AuditRepository::class
     singleOf(::AnnouncementRepositoryImpl) bind AnnouncementRepository::class
     singleOf(::NotificationRepositoryImpl) bind NotificationRepository::class
