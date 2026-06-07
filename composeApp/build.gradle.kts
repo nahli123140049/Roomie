@@ -116,6 +116,14 @@ kotlin {
             implementation(libs.sqldelight.android.driver)
         }
         
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.androidx.test.junit)
+                implementation(libs.androidx.test.espresso.core)
+            }
+        }
+        
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
             implementation(libs.sqldelight.native.driver)

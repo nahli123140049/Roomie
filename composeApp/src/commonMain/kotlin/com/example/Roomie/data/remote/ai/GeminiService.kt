@@ -8,7 +8,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.Json
 
-class GeminiService(
+open class GeminiService(
     private val client: HttpClient,
     private val json: Json
 ) {
@@ -31,7 +31,7 @@ class GeminiService(
         - Konversi format tanggal apa pun (misal: 06/06, 6 Juni, 6-6) menjadi format standar YYYY-MM-DD.
     """.trimIndent()
 
-    suspend fun processUserCommand(input: String): ExtractionResult? {
+    open suspend fun processUserCommand(input: String): ExtractionResult? {
         val url = "${AiConfig.BASE_URL}/${AiConfig.GEMINI_MODEL}:generateContent?key=${AiConfig.GEMINI_API_KEY}"
         
         val requestBody = GeminiRequest(

@@ -13,12 +13,12 @@ import kotlinx.datetime.*
 /**
  * UseCase untuk memproses input natural language menjadi hasil pencarian ruangan
  */
-class ProcessAICommandUseCase(
+open class ProcessAICommandUseCase(
     private val geminiService: GeminiService,
     private val facilityRepository: FacilityRepository,
     private val bookingRepository: BookingRepository
 ) {
-    suspend operator fun invoke(userInput: String): AIResult {
+    open suspend operator fun invoke(userInput: String): AIResult {
         // 1. Ekstrak data pake Gemini
         val extraction = geminiService.processUserCommand(userInput) 
             ?: return AIResult.Error("Gagal memproses permintaan lo, bre. Coba lagi ya!")
