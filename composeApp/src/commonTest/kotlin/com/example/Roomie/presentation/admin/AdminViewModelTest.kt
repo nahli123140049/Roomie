@@ -30,7 +30,6 @@ class AdminViewModelTest {
         bookingRepository = FakeBookingRepository()
         announcementRepository = FakeAnnouncementRepository()
         
-        // Mock dependencies yang belum ada Fakenya
         val notificationRepository = object : com.example.Roomie.domain.repository.NotificationRepository {
             override fun getAllNotifications() = flowOf(emptyList<Notification>())
             override suspend fun addNotification(notification: Notification) {}
@@ -38,8 +37,12 @@ class AdminViewModelTest {
         }
         
         val auditRepository = object : com.example.Roomie.domain.repository.AuditRepository {
-            override fun getAuditLogs() = flowOf(emptyList<AuditLog>())
-            override suspend fun addAuditLog(log: AuditLog) = Result.success(Unit)
+            private val logs = mutableListOf<AuditLog>()
+            override fun getAuditLogs() = flowOf(logs)
+            override suspend fun addAuditLog(log: AuditLog): Result<Unit> {
+                logs.add(log)
+                return Result.success(Unit)
+            }
         }
 
         viewModel = AdminViewModel(
@@ -93,11 +96,71 @@ class AdminViewModelTest {
     }
 
     @Test
+    fun `onReportStatusFilter should update state`() = runTest {
+        val reports = listOf(
+            Report("1", "A", "L1", "D1", UrgencyLevel.LOW, ReportStatus.PENDING, 0),
+            Report("2", "B", "L2", "D2", UrgencyLevel.LOW, ReportStatus.DONE, 0)
+        )
+        reportRepository.setReports(reports)
+        
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        viewModel.onReportStatusFilter(ReportStatus.DONE)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        val state = viewModel.uiState.value as AdminUiState.Success
+        assertEquals(1, state.filteredReports.size)
+        assertEquals(ReportStatus.DONE, state.filteredReports[0].status)
+    }
+
+    @Test
+    fun `approveBooking should update status and add audit log`() = runTest {
+        val booking = Booking("B1", "R1", "Room1", "GKU2", 0, 1000, BookingStatus.PENDING, subject = "Study")
+        bookingRepository.setBookings(listOf(booking))
+        
+        viewModel.approveBooking(booking)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        val bookings = bookingRepository.getAllBookings().first()
+        assertEquals(BookingStatus.APPROVED, bookings[0].status)
+        
+        val state = viewModel.uiState.value as AdminUiState.Success
+        assertTrue(state.auditLogs.any { it.action == "APPROVED" })
+    }
+
+    @Test
+    fun `rejectBooking should update status`() = runTest {
+        val booking = Booking("B1", "R1", "Room1", "GKU2", 0, 1000, BookingStatus.PENDING, subject = "Study")
+        bookingRepository.setBookings(listOf(booking))
+        
+        viewModel.rejectBooking(booking)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        val bookings = bookingRepository.getAllBookings().first()
+        assertEquals(BookingStatus.REJECTED, bookings[0].status)
+    }
+
+    @Test
+    fun `overrideRoomStatus should update room and add audit log`() = runTest {
+        val room = Room("1", "GKU2", "101", 1, RoomStatus.AVAILABLE)
+        facilityRepository.setRooms(listOf(room))
+        
+        viewModel.overrideRoomStatus("1", RoomStatus.MAINTENANCE, "Broken door")
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        val updatedRoom = facilityRepository.getRoomById("1").first()
+        assertEquals(RoomStatus.MAINTENANCE, updatedRoom?.status)
+        assertEquals("Broken door", updatedRoom?.maintenanceDescription)
+        
+        val state = viewModel.uiState.value as AdminUiState.Success
+        assertTrue(state.auditLogs.any { it.action == "OVERRIDE_MAINTENANCE" })
+    }
+
+    @Test
     fun `broadcastMessage should trigger use case`() = runTest {
         viewModel.broadcastMessage("Info", "Test Pesan")
         testDispatcher.scheduler.advanceUntilIdle()
         
-        // Verifikasi via repository (state data)
         val announcements = announcementRepository.getAllAnnouncements().first()
         assertTrue(announcements.any { it.title == "Info" })
     }

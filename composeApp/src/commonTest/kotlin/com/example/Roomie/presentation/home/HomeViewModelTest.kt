@@ -57,7 +57,6 @@ class HomeViewModelTest {
             getAllReportsUseCase = GetAllReportsUseCase(reportRepository),
             getAllAnnouncementsUseCase = GetAllAnnouncementsUseCase(announcementRepository),
             performAutomaticCleanupUseCase = PerformAutomaticCleanupUseCase(bookingRepository),
-            reportRepository = reportRepository,
             userPreferences = userPreferences
         )
     }
@@ -65,6 +64,24 @@ class HomeViewModelTest {
     @AfterTest
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `initial state should be Loading`() = runTest {
+        val mockDataStore = object : DataStore<Preferences> {
+            override val data = flowOf(emptyPreferences())
+            override suspend fun updateData(transform: suspend (Preferences) -> Preferences) = emptyPreferences()
+        }
+        val userPrefs = UserPreferences(mockDataStore)
+        val vm = HomeViewModel(
+            GetCurrentUserUseCase(authRepository),
+            GetAllReportsUseCase(reportRepository),
+            GetAllAnnouncementsUseCase(announcementRepository),
+            PerformAutomaticCleanupUseCase(bookingRepository),
+            userPrefs
+        )
+        
+        assertEquals(HomeUiState.Loading, vm.uiState.value)
     }
 
     @Test
@@ -101,4 +118,25 @@ class HomeViewModelTest {
         assertEquals("3", state.recentReports[1].id)
         assertEquals("2", state.recentReports[2].id)
     }
+
+    @Test
+    fun `banners should show default message when announcements are empty`() = runTest {
+        announcementRepository.setAnnouncements(emptyList())
+        
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        val state = viewModel.uiState.value as HomeUiState.Success
+        assertEquals(listOf("Selamat datang di Roomie ITERA!"), state.banners)
+    }
+
+    @Test
+    fun `userName should show default when user is null`() = runTest {
+        authRepository.setCurrentUser(null)
+        
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        val state = viewModel.uiState.value as HomeUiState.Success
+        assertEquals("User", state.userName)
+    }
+
 }

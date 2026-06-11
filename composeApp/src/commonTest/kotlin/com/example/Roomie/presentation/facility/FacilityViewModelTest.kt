@@ -2,6 +2,8 @@ package com.example.Roomie.presentation.facility
 
 import com.example.Roomie.data.repository.FakeBookingRepository
 import com.example.Roomie.data.repository.FakeFacilityRepository
+import com.example.Roomie.domain.model.Booking
+import com.example.Roomie.domain.model.BookingStatus
 import com.example.Roomie.domain.model.Room
 import com.example.Roomie.domain.model.RoomStatus
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +12,10 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -18,18 +24,17 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FacilityViewModelTest {
-    private lateinit var repository: FakeFacilityRepository
-    private lateinit var bookingRepository: FakeBookingRepository
     private lateinit var viewModel: FacilityViewModel
+    private lateinit var facilityRepository: FakeFacilityRepository
+    private lateinit var bookingRepository: FakeBookingRepository
     private val testDispatcher = StandardTestDispatcher()
 
     @BeforeTest
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        repository = FakeFacilityRepository()
+        facilityRepository = FakeFacilityRepository()
         bookingRepository = FakeBookingRepository()
-        viewModel = FacilityViewModel(repository, bookingRepository)
-        viewModel.initBuilding("GKU2")
+        viewModel = FacilityViewModel(facilityRepository, bookingRepository)
     }
 
     @AfterTest
@@ -38,43 +43,65 @@ class FacilityViewModelTest {
     }
 
     @Test
-    fun `selectFloor should update selectedFloor in Success state`() = runTest {
+    fun `initBuilding should load rooms and update state to Success`() = runTest {
+        val buildingId = "GKU2"
         val rooms = listOf(
-            Room("1", "GKU2", "101", 1, RoomStatus.AVAILABLE),
-            Room("2", "GKU2", "201", 2, RoomStatus.AVAILABLE),
-            Room("3", "GKU2", "301", 3, RoomStatus.AVAILABLE),
-            Room("4", "GKU2", "401", 4, RoomStatus.AVAILABLE)
+            Room("1", buildingId, "101", 1, RoomStatus.AVAILABLE),
+            Room("2", buildingId, "201", 2, RoomStatus.AVAILABLE)
         )
-        repository.setRooms(rooms)
+        facilityRepository.setRooms(rooms)
         
-        testDispatcher.scheduler.advanceUntilIdle()
-        
-        viewModel.selectFloor(2)
+        viewModel.initBuilding(buildingId)
         testDispatcher.scheduler.advanceUntilIdle()
         
         val state = viewModel.uiState.value
         assertTrue(state is FacilityUiState.Success)
-        assertEquals(2, (state as FacilityUiState.Success).selectedFloor)
+        assertEquals(2, state.rooms.size)
+        assertEquals(1, state.filteredRooms.size) // default floor is 1
     }
 
     @Test
-    fun `filteredRooms should only contain rooms for the selected floor`() = runTest {
+    fun `selectFloor should update filteredRooms`() = runTest {
+        val buildingId = "GKU2"
         val rooms = listOf(
-            Room("1", "GKU2", "101", 1, RoomStatus.AVAILABLE),
-            Room("2", "GKU2", "102", 1, RoomStatus.AVAILABLE),
-            Room("3", "GKU2", "201", 2, RoomStatus.AVAILABLE),
-            Room("4", "GKU2", "301", 3, RoomStatus.AVAILABLE),
-            Room("5", "GKU2", "401", 4, RoomStatus.AVAILABLE)
+            Room("1", buildingId, "101", 1, RoomStatus.AVAILABLE),
+            Room("2", buildingId, "201", 2, RoomStatus.AVAILABLE)
         )
-        repository.setRooms(rooms)
+        facilityRepository.setRooms(rooms)
         
-        testDispatcher.scheduler.advanceUntilIdle()
-        
-        viewModel.selectFloor(1)
+        viewModel.initBuilding(buildingId)
+        viewModel.selectFloor(2)
         testDispatcher.scheduler.advanceUntilIdle()
         
         val state = viewModel.uiState.value as FacilityUiState.Success
-        assertEquals(2, state.filteredRooms.size)
-        assertTrue(state.filteredRooms.all { it.floor == 1 })
+        assertEquals(2, state.selectedFloor)
+        assertEquals(1, state.filteredRooms.size)
+        assertEquals("2", state.filteredRooms[0].id)
+    }
+
+    @Test
+    fun `room status should be BOOKED if there is an approved booking for selected date`() = runTest {
+        val buildingId = "GKU2"
+        val date = LocalDate(2026, 6, 11)
+        val startOfDay = date.atStartOfDayIn(TimeZone.currentSystemDefault()).toEpochMilliseconds()
+        
+        val rooms = listOf(Room("1", buildingId, "101", 1, RoomStatus.AVAILABLE))
+        val bookings = listOf(
+            Booking("B1", "1", "User1", "Study", startOfDay, startOfDay + 3600000, BookingStatus.APPROVED)
+        )
+        
+        facilityRepository.setRooms(rooms)
+        bookingRepository.setBookings(bookings)
+        
+        viewModel.initBuilding(buildingId)
+        viewModel.selectDate(date)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        val state = viewModel.uiState.value as FacilityUiState.Success
+        assertEquals(RoomStatus.BOOKED, state.rooms[0].status)
     }
 }
+
+// Extension to help with date
+private fun LocalDate.atStartOfDayIn(tz: TimeZone) = 
+    kotlinx.datetime.LocalDateTime(this, kotlinx.datetime.LocalTime(0, 0)).toInstant(tz)

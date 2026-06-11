@@ -14,7 +14,11 @@ import com.example.Roomie.domain.usecase.GetAllReportsUseCase
 import com.example.Roomie.domain.usecase.GetCurrentUserUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -33,6 +37,14 @@ class ProfileViewModelTest {
     private lateinit var viewModel: ProfileViewModel
     private val testDispatcher = StandardTestDispatcher()
 
+    private class MockSupabaseService : SupabaseService {
+        var urlToReturn: String? = "http://avatar.jpg"
+        override suspend fun uploadReportImage(imageBytes: ByteArray): String? = null
+        override suspend fun uploadAvatar(imageBytes: ByteArray): String? = urlToReturn
+    }
+    
+    private val supabaseService = MockSupabaseService()
+
     @BeforeTest
     fun setup() {
         Dispatchers.setMain(testDispatcher)
@@ -40,21 +52,21 @@ class ProfileViewModelTest {
         authRepository = FakeAuthRepository()
         
         val mockDataStore = object : DataStore<Preferences> {
-            override val data = flowOf(emptyPreferences())
-            override suspend fun updateData(transform: suspend (Preferences) -> Preferences) = emptyPreferences()
+            private val _data = MutableStateFlow(emptyPreferences())
+            override val data = _data.asStateFlow()
+            override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                val next = transform(_data.value)
+                _data.value = next
+                return next
+            }
         }
         userPreferences = UserPreferences(mockDataStore)
 
-        val fakeSupabaseService = object : SupabaseService {
-            override suspend fun uploadReportImage(imageBytes: ByteArray): String? = null
-            override suspend fun uploadAvatar(imageBytes: ByteArray): String? = null
-        }
-        
         viewModel = ProfileViewModel(
             getCurrentUserUseCase = GetCurrentUserUseCase(authRepository),
             getAllReportsUseCase = GetAllReportsUseCase(reportRepository),
             userPreferences = userPreferences,
-            supabaseService = fakeSupabaseService
+            supabaseService = supabaseService
         )
     }
 
@@ -96,5 +108,16 @@ class ProfileViewModelTest {
         val state = viewModel.uiState.value as ProfileUiState.Success
         assertEquals("2", state.reports[0].id)
         assertEquals("1", state.reports[1].id)
+    }
+
+    @Test
+    fun `updateAvatar should upload and save to preferences`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle() // Load initial success
+        
+        viewModel.updateAvatar(byteArrayOf(1, 2, 3))
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        val state = viewModel.uiState.value as ProfileUiState.Success
+        assertEquals("http://avatar.jpg", state.avatarUrl)
     }
 }

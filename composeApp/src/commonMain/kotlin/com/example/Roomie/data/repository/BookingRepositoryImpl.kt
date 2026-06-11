@@ -83,6 +83,8 @@ class BookingRepositoryImpl(
                             table = "bookings"
                         }
                         
+                        channel.subscribe()
+                        
                         changeFlow.collect { change ->
                             withContext(Dispatchers.IO) {
                                 when (change) {

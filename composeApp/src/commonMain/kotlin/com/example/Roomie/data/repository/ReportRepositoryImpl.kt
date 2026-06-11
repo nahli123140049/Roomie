@@ -10,6 +10,7 @@ import com.example.Roomie.domain.model.UrgencyLevel
 import com.example.Roomie.domain.repository.ReportRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.realtime.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -17,6 +18,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import io.github.aakira.napier.Napier
 
 @Serializable
@@ -48,6 +51,7 @@ class ReportRepositoryImpl(
             networkMonitor.isOnline.collect { online ->
                 if (online) {
                     try {
+                        // 1. Initial Sync
                         val remoteReports = supabaseClient.postgrest["reports"]
                             .select().decodeList<ReportRemoteDto>()
                         
@@ -63,6 +67,53 @@ class ReportRepositoryImpl(
                                     createdAt = dto.created_at,
                                     imageUrl = dto.image_url
                                 )
+                            }
+                        }
+
+                        // 2. Realtime Listener
+                        supabaseClient.realtime.connect()
+                        val channel = supabaseClient.realtime.channel("reports-sync")
+                        val changeFlow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                            table = "reports"
+                        }
+
+                        channel.subscribe()
+
+                        changeFlow.collect { change ->
+                            withContext(Dispatchers.IO) {
+                                when (change) {
+                                    is PostgresAction.Insert -> {
+                                        val dto = change.decodeRecord<ReportRemoteDto>()
+                                        queries.insertReport(
+                                            id = dto.id,
+                                            category = dto.category,
+                                            location = dto.location,
+                                            description = dto.description,
+                                            urgency = dto.urgency,
+                                            status = dto.status,
+                                            createdAt = dto.created_at,
+                                            imageUrl = dto.image_url
+                                        )
+                                    }
+                                    is PostgresAction.Update -> {
+                                        val dto = change.decodeRecord<ReportRemoteDto>()
+                                        queries.insertReport(
+                                            id = dto.id,
+                                            category = dto.category,
+                                            location = dto.location,
+                                            description = dto.description,
+                                            urgency = dto.urgency,
+                                            status = dto.status,
+                                            createdAt = dto.created_at,
+                                            imageUrl = dto.image_url
+                                        )
+                                    }
+                                    is PostgresAction.Delete -> {
+                                        val id = change.oldRecord["id"]?.jsonPrimitive?.contentOrNull
+                                        if (id != null) queries.deleteReport(id)
+                                    }
+                                    else -> {}
+                                }
                             }
                         }
                     } catch (e: Exception) {

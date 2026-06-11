@@ -70,4 +70,57 @@ class BookingViewModelTest {
     fun `isSubmitEnabled should be false if fields are empty`() {
         assertFalse(viewModel.state.value.isSubmitEnabled)
     }
+
+    @Test
+    fun `submitBooking should fail if time is outside allowed range`() = runTest {
+        viewModel.onDateChange("15/06/2026")
+        viewModel.onStartTimeChange("04:00")
+        viewModel.onEndTimeChange("05:00")
+        viewModel.onPurposeChange("Study")
+        
+        facilityRepository.setRooms(listOf(Room("1", "GKU2", "101", 1, RoomStatus.AVAILABLE)))
+        viewModel.loadRooms(listOf("1"))
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        viewModel.submitBooking()
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        assertEquals("Peminjaman hanya tersedia pukul 06:00 - 22:00 WIB", viewModel.state.value.error)
+    }
+
+    @Test
+    fun `submitBooking should fail if end time is before start time`() = runTest {
+        viewModel.onDateChange("15/06/2026")
+        viewModel.onStartTimeChange("10:00")
+        viewModel.onEndTimeChange("09:00")
+        viewModel.onPurposeChange("Study")
+        
+        facilityRepository.setRooms(listOf(Room("1", "GKU2", "101", 1, RoomStatus.AVAILABLE)))
+        viewModel.loadRooms(listOf("1"))
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        viewModel.submitBooking()
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        assertEquals("Waktu selesai harus setelah waktu mulai", viewModel.state.value.error)
+    }
+
+    @Test
+    fun `submitBooking should succeed with valid data`() = runTest {
+        viewModel.onDateChange("20/06/2026")
+        viewModel.onStartTimeChange("08:00")
+        viewModel.onEndTimeChange("10:00")
+        viewModel.onPurposeChange("Study")
+        
+        facilityRepository.setRooms(listOf(Room("1", "GKU2", "101", 1, RoomStatus.AVAILABLE)))
+        viewModel.loadRooms(listOf("1"))
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        viewModel.submitBooking()
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        assertTrue(viewModel.state.value.isSuccess)
+        assertFalse(viewModel.state.value.isLoading)
+    }
+
 }
