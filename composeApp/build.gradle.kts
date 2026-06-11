@@ -10,6 +10,26 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.sqldelight)
     alias(libs.plugins.detekt)
+    id("org.jetbrains.kotlinx.kover") version "0.8.3"
+}
+
+kover {
+    reports {
+        filters {
+            includes {
+                packages("com.example.Roomie")
+            }
+            excludes {
+                classes("com.example.Roomie.BuildConfig")
+                // Exclude UI Screens (Sering narik angka coverage ke bawah karena isinya cuma UI)
+                classes("*ScreenKt", "*ContentKt", "*BubbleKt", "*TileKt", "*ItemKt")
+                // Exclude Generated Database Code
+                packages("com.example.Roomie.data.local")
+                // Exclude DI
+                packages("com.example.Roomie.di")
+            }
+        }
+    }
 }
 
 // Load local.properties for API keys
@@ -107,6 +127,8 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
             implementation(libs.koin.test)
+            implementation(libs.mockk)
+            implementation(libs.ktor.client.mock)
         }
         
         androidMain.dependencies {

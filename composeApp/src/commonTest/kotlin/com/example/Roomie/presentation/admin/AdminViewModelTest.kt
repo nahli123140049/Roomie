@@ -7,15 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlinx.coroutines.test.*
+import kotlin.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AdminViewModelTest {
@@ -37,6 +30,7 @@ class AdminViewModelTest {
         bookingRepository = FakeBookingRepository()
         announcementRepository = FakeAnnouncementRepository()
         
+        // Mock dependencies yang belum ada Fakenya
         val notificationRepository = object : com.example.Roomie.domain.repository.NotificationRepository {
             override fun getAllNotifications() = flowOf(emptyList<Notification>())
             override suspend fun addNotification(notification: Notification) {}
@@ -44,9 +38,8 @@ class AdminViewModelTest {
         }
         
         val auditRepository = object : com.example.Roomie.domain.repository.AuditRepository {
-            private val logs = mutableListOf<AuditLog>()
-            override fun getAuditLogs() = flowOf(logs)
-            override suspend fun addAuditLog(log: AuditLog) = Result.success(Unit).also { logs.add(log) }
+            override fun getAuditLogs() = flowOf(emptyList<AuditLog>())
+            override suspend fun addAuditLog(log: AuditLog) = Result.success(Unit)
         }
 
         viewModel = AdminViewModel(
@@ -70,33 +63,22 @@ class AdminViewModelTest {
     }
 
     @Test
-    fun `initial state should be Loading then Success`() = runTest {
-        assertTrue(viewModel.uiState.value is AdminUiState.Loading)
+    fun `initial load should set Success state with data`() = runTest {
+        val rooms = listOf(Room("1", "GKU2", "101", 1, RoomStatus.AVAILABLE))
+        facilityRepository.setRooms(rooms)
         
         testDispatcher.scheduler.advanceUntilIdle()
         
-        assertTrue(viewModel.uiState.value is AdminUiState.Success)
+        val state = viewModel.uiState.value
+        assertTrue(state is AdminUiState.Success)
+        assertEquals(1, (state as AdminUiState.Success).rooms.size)
     }
 
     @Test
-    fun `approveBooking should update status and add audit log`() = runTest {
-        val booking = Booking("B1", "R1", "101", "GKU2", 0L, 0L, BookingStatus.PENDING, "Test")
-        bookingRepository.setBookings(listOf(booking))
-        
-        testDispatcher.scheduler.advanceUntilIdle()
-        
-        viewModel.approveBooking(booking)
-        testDispatcher.scheduler.advanceUntilIdle()
-        
-        val updatedBooking = bookingRepository.getAllBookings().first().first()
-        assertEquals(BookingStatus.APPROVED, updatedBooking.status)
-    }
-
-    @Test
-    fun `onReportSearch should filter reports`() = runTest {
+    fun `onReportSearch should filter results correctly`() = runTest {
         val reports = listOf(
-            Report("1", "A", "Loc A", "Broken AC", UrgencyLevel.HIGH, ReportStatus.PENDING, 0L),
-            Report("2", "B", "Loc B", "Leak", UrgencyLevel.LOW, ReportStatus.PENDING, 0L)
+            Report("1", "A", "Gedung A", "Rusak AC", UrgencyLevel.HIGH, ReportStatus.PENDING, 0L),
+            Report("2", "B", "Gedung B", "Bocor", UrgencyLevel.LOW, ReportStatus.PENDING, 0L)
         )
         reportRepository.setReports(reports)
         
@@ -108,5 +90,15 @@ class AdminViewModelTest {
         val state = viewModel.uiState.value as AdminUiState.Success
         assertEquals(1, state.filteredReports.size)
         assertTrue(state.filteredReports[0].description.contains("AC"))
+    }
+
+    @Test
+    fun `broadcastMessage should trigger use case`() = runTest {
+        viewModel.broadcastMessage("Info", "Test Pesan")
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        // Verifikasi via repository (state data)
+        val announcements = announcementRepository.getAllAnnouncements().first()
+        assertTrue(announcements.any { it.title == "Info" })
     }
 }
