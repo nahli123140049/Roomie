@@ -1,5 +1,7 @@
 package com.example.Roomie.data.repository
 
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
 import com.example.Roomie.core.network.NetworkMonitor
 import com.example.Roomie.data.local.RoomieDatabase
 import com.example.Roomie.domain.model.Report
@@ -8,8 +10,6 @@ import com.example.Roomie.domain.model.UrgencyLevel
 import com.example.Roomie.domain.repository.ReportRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
-import app.cash.sqldelight.coroutines.asFlow
-import app.cash.sqldelight.coroutines.mapToList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import io.github.aakira.napier.Napier
 
 @Serializable
 data class ReportRemoteDto(
@@ -65,7 +66,7 @@ class ReportRepositoryImpl(
                             }
                         }
                     } catch (e: Exception) {
-                        // silent fail
+                        Napier.e("Report Sync Error: ${e.message}", e)
                     }
                 }
             }
@@ -102,6 +103,8 @@ class ReportRepositoryImpl(
                 }
                 queries.updateReportStatus(status.name, reportId)
             } catch (e: Exception) {
+                Napier.e("Update Report Status Error: ${e.message}", e)
+                // update locally anyway
                 queries.updateReportStatus(status.name, reportId)
             }
         }
@@ -110,9 +113,15 @@ class ReportRepositoryImpl(
     override suspend fun submitReport(report: Report) {
         withContext(Dispatchers.IO) {
             try {
+                // 🌐 CLOUD SAVE (MANDATORY)
                 if (networkMonitor.isOnline.value) {
                     supabaseClient.postgrest["reports"].insert(report.toDto())
+                    Napier.d("Report saved to Cloud: ${report.id}")
+                } else {
+                    Napier.w("Offline: Saving report locally only. Will not be visible to others until sync.")
                 }
+                
+                // 💾 LOCAL SAVE
                 queries.insertReport(
                     id = report.id,
                     category = report.category,
@@ -124,7 +133,8 @@ class ReportRepositoryImpl(
                     imageUrl = report.imageUrl
                 )
             } catch (e: Exception) {
-                // save locally anyway
+                Napier.e("Submit Report Error: ${e.message}", e)
+                // local fallback
                 queries.insertReport(
                     id = report.id,
                     category = report.category,
@@ -149,24 +159,4 @@ class ReportRepositoryImpl(
         created_at = createdAt,
         image_url = imageUrl
     )
-
-    suspend fun seedDummyReports() {
-        withContext(Dispatchers.IO) {
-            val existing = queries.getAllReports().executeAsList()
-            if (existing.isEmpty()) {
-                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                submitReport(
-                    Report(
-                        id = "R1",
-                        category = "Fasilitas",
-                        location = "GKU 2 - 101",
-                        description = "AC tidak dingin",
-                        urgency = UrgencyLevel.MEDIUM,
-                        status = ReportStatus.PENDING,
-                        createdAt = now - 86400000
-                    )
-                )
-            }
-        }
-    }
 }

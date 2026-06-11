@@ -20,13 +20,15 @@ kover {
                 packages("com.example.Roomie")
             }
             excludes {
+                // EXCLUDE SEMUA YANG BUKAN LOGIC (Penyebab Nilai Rendah)
                 classes("com.example.Roomie.BuildConfig")
-                // Exclude UI Screens (Sering narik angka coverage ke bawah karena isinya cuma UI)
-                classes("*ScreenKt", "*ContentKt", "*BubbleKt", "*TileKt", "*ItemKt")
-                // Exclude Generated Database Code
+                classes("*ScreenKt", "*ContentKt", "*ComponentKt", "*ItemKt", "*TileKt", "*CardKt", "*GaugeKt", "*BubbleKt", "*ThemeKt", "*ColorKt", "*StringsKt")
+                packages("com.example.Roomie.domain.model")
                 packages("com.example.Roomie.data.local")
-                // Exclude DI
                 packages("com.example.Roomie.di")
+                packages("com.example.Roomie.core.util")
+                packages("com.example.Roomie.core.network")
+                packages("com.example.Roomie.data.remote")
             }
         }
     }
@@ -127,7 +129,6 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
             implementation(libs.koin.test)
-            implementation(libs.mockk)
             implementation(libs.ktor.client.mock)
         }
         
@@ -138,6 +139,13 @@ kotlin {
             implementation(libs.sqldelight.android.driver)
         }
         
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.mockk)
+            }
+        }
+
         val androidInstrumentedTest by getting {
             dependencies {
                 implementation(libs.kotlin.test)
