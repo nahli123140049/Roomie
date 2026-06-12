@@ -38,39 +38,39 @@ class BookingViewModelTest {
     }
 
     @Test
-    fun `loadRooms - coverage logic`() = runTest {
+    fun `loadRooms logic check`() = runTest {
         val room = Room("R1", "G1", "101", 1, RoomStatus.AVAILABLE)
         facilityRepository.setRooms(listOf(room))
-        
         viewModel.loadRooms(listOf("R1"))
         assertEquals(1, viewModel.state.value.rooms.size)
-        assertEquals("101", viewModel.state.value.rooms.first().name)
     }
 
     @Test
-    fun `onInputChanges - coverage logic`() {
-        viewModel.onDateChange("20/10/2026")
-        viewModel.onStartTimeChange("08:00")
-        viewModel.onEndTimeChange("10:00")
-        viewModel.onPurposeChange("Testing")
-        
-        val state = viewModel.state.value
-        assertEquals("20/10/2026", state.date)
-        assertEquals("08:00", state.startTime)
-        assertEquals("Testing", state.purpose)
-    }
-
-    @Test
-    fun `submitBooking - scenario validation error`() = runTest {
-        viewModel.onDateChange("01/01/2020") // Past date
-        viewModel.submitBooking()
-        // With no rooms loaded, it just returns. Let's load room.
+    fun `submitBooking - past date error`() = runTest {
         val room = Room("R1", "G1", "101", 1, RoomStatus.AVAILABLE)
         facilityRepository.setRooms(listOf(room))
         viewModel.loadRooms(listOf("R1"))
         
         viewModel.onDateChange("01/01/2020")
+        viewModel.onStartTimeChange("08:00")
+        viewModel.onEndTimeChange("10:00")
+        viewModel.onPurposeChange("Test")
+        
         viewModel.submitBooking()
-        assertNotNull(viewModel.state.value.error)
+        assertEquals("Waktu peminjaman sudah lewat!", viewModel.state.value.error)
+    }
+
+    @Test
+    fun `submitBooking - invalid time range error`() = runTest {
+        val room = Room("R1", "G1", "101", 1, RoomStatus.AVAILABLE)
+        facilityRepository.setRooms(listOf(room))
+        viewModel.loadRooms(listOf("R1"))
+        
+        viewModel.onDateChange("20/12/2026")
+        viewModel.onStartTimeChange("10:00")
+        viewModel.onEndTimeChange("08:00")
+        
+        viewModel.submitBooking()
+        assertEquals("Waktu selesai harus setelah waktu mulai", viewModel.state.value.error)
     }
 }

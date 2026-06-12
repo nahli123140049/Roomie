@@ -34,8 +34,8 @@ class SupabaseAuthRepositoryImplTest {
     }
 
     @Test
-    fun `login - coverage check basic branch`() = runTest {
-        val result = repository.login("12345")
+    fun `login - trigger catch block for coverage`() = runTest {
+        val result = repository.login("wrong")
         assertTrue(result.isFailure)
     }
 }

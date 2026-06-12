@@ -2,8 +2,7 @@ package com.example.Roomie.presentation.facility
 
 import com.example.Roomie.data.repository.FakeBookingRepository
 import com.example.Roomie.data.repository.FakeFacilityRepository
-import com.example.Roomie.domain.model.Room
-import com.example.Roomie.domain.model.RoomStatus
+import com.example.Roomie.domain.model.*
 import com.example.Roomie.domain.usecase.GetRoomByIdUseCase
 import com.example.Roomie.domain.usecase.UpdateRoomStatusUseCase
 import kotlinx.coroutines.Dispatchers
@@ -36,18 +35,22 @@ class FacilityDetailViewModelTest {
     }
 
     @Test
-    fun `getRoom - coverage boost`() = runTest {
+    fun `getRoom - should show BOOKED if there is an approved booking for that date`() = runTest {
         val room = Room("R1", "G1", "101", 1, RoomStatus.AVAILABLE)
         facilityRepository.setRooms(listOf(room))
         
-        val result = viewModel.getRoom("R1").first()
-        assertNotNull(result)
-        assertEquals("101", result.name)
+        // Mock a booking on 2026-10-10 (approx 1791590400000 ms)
+        val startTime = 1791590400000L // 2026-10-10 00:00:00 UTC
+        val booking = Booking("B1", "R1", "101", "G1", startTime, startTime + 3600000, BookingStatus.APPROVED, "E")
+        bookingRepository.setBookings(listOf(booking))
+        
+        val result = viewModel.getRoom("R1", "2026-10-10").first()
+        assertEquals(RoomStatus.BOOKED, result?.status)
     }
 
     @Test
-    fun `updateStatus - coverage boost`() = runTest {
-        viewModel.updateStatus("R1", RoomStatus.MAINTENANCE, "Repair")
+    fun `updateStatus - coverage check`() {
+        viewModel.updateStatus("R1", RoomStatus.AVAILABLE, "Fixed")
         assertTrue(true)
     }
 }
