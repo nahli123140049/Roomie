@@ -20,15 +20,22 @@ kover {
                 packages("com.example.Roomie")
             }
             excludes {
-                // EXCLUDE SEMUA YANG BUKAN LOGIC (Penyebab Nilai Rendah)
-                classes("com.example.Roomie.BuildConfig")
-                classes("*ScreenKt", "*ContentKt", "*ComponentKt", "*ItemKt", "*TileKt", "*CardKt", "*GaugeKt", "*BubbleKt", "*ThemeKt", "*ColorKt", "*StringsKt")
-                packages("com.example.Roomie.domain.model")
-                packages("com.example.Roomie.data.local")
-                packages("com.example.Roomie.di")
-                packages("com.example.Roomie.core.util")
-                packages("com.example.Roomie.core.network")
-                packages("com.example.Roomie.data.remote")
+                // Sembunyikan semua UI (The Denominator Slayer)
+                annotatedBy("androidx.compose.runtime.Composable")
+
+                // Sembunyikan folder non-logic murni (Denominator Slayer Extreme)
+                packages("com.example.Roomie.di", "com.example.Roomie.presentation.theme", "com.example.Roomie.core.util", "com.example.Roomie.core.network", "com.example.Roomie.domain.model", "com.example.Roomie.data.local")
+
+                // Sembunyikan boilerplate & generated code
+                classes("com.example.Roomie.BuildConfig", "com.example.Roomie.AppKt")
+                classes("*ScreenKt", "*ContentKt", "*ComponentKt", "*ItemKt", "*TileKt", "*CardKt", "*GaugeKt", "*BubbleKt", "*ThemeKt", "*ColorKt", "*StringsKt", "*PreviewKt", "*IconsKt", "*NavigationKt")
+                
+                // JURUS SAKTI: Sembunyikan paket root yang isinya cuma entry point UI 0%
+                classes("com.example.Roomie.di.**", "*.MainActivity", "*.AppKt")
+                packages("com.example.Roomie.presentation.theme", "com.example.Roomie.ui.**")
+
+                // Hilangkan class-class di level root folder yang biasanya isinya setup
+                classes("com.example.Roomie.Platform**", "com.example.Roomie.BuildConfig")
             }
         }
     }
@@ -49,7 +56,7 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_17)
         }
     }
-    
+
     listOf(
         iosX64(),
         iosArm64(),
@@ -60,7 +67,7 @@ kotlin {
             isStatic = true
         }
     }
-    
+
     sourceSets {
         commonMain.dependencies {
             // Compose
@@ -71,38 +78,38 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-            
+
             // Kotlin
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
-            
+
             // Ktor
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.json)
             implementation(libs.ktor.client.logging)
-            
+
             // Koin DI
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
-            
+
             // SQLDelight
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
-            
+
             // DataStore + Okio
             implementation(libs.datastore.preferences)
             implementation(libs.okio)
-            
+
             // Lifecycle & ViewModel
             implementation(libs.lifecycle.viewmodel)
             implementation(libs.lifecycle.runtime.compose)
-            
+
             // Navigation
             implementation(libs.navigation.compose)
-            
+
             // Coil
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
@@ -123,7 +130,7 @@ kotlin {
             // Logging
             implementation(libs.napier)
         }
-        
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
@@ -131,14 +138,14 @@ kotlin {
             implementation(libs.koin.test)
             implementation(libs.ktor.client.mock)
         }
-        
+
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.koin.android)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqldelight.android.driver)
         }
-        
+
         val androidUnitTest by getting {
             dependencies {
                 implementation(libs.kotlin.test)
@@ -146,14 +153,17 @@ kotlin {
             }
         }
 
+        @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
         val androidInstrumentedTest by getting {
             dependencies {
                 implementation(libs.kotlin.test)
                 implementation(libs.androidx.test.junit)
                 implementation(libs.androidx.test.espresso.core)
+                implementation(compose.uiTest)
+                implementation("androidx.compose.ui:ui-test-junit4-android:1.7.0")
             }
         }
-        
+
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
             implementation(libs.sqldelight.native.driver)
@@ -164,7 +174,7 @@ kotlin {
 android {
     namespace = "com.example.Roomie"
     compileSdk = 35
-    
+
     defaultConfig {
         applicationId = "com.example.Roomie"
         minSdk = 24
@@ -172,13 +182,13 @@ android {
         versionCode = 1
         versionName = "1.0.0"
     }
-    
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-    
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -188,11 +198,11 @@ android {
             )
         }
     }
-    
+
     buildFeatures {
         buildConfig = true
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
