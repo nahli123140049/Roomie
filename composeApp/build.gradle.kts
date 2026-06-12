@@ -35,7 +35,7 @@ kover {
                 packages("com.example.Roomie.presentation.theme", "com.example.Roomie.ui.**")
 
                 // Hilangkan class-class di level root folder yang biasanya isinya setup
-                classes("com.example.Roomie.Platform**", "com.example.Roomie.BuildConfig")
+                classes("com.example.Roomie.Platform**", "com.example.Roomie.BuildConfig", "com.example.Roomie.AppKt")
             }
         }
     }
