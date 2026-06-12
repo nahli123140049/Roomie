@@ -10,7 +10,7 @@ Aplikasi ini dibangun menggunakan **Kotlin Multiplatform (KMP)** dan **Compose M
 
 |                                           📺 Video Demo (YouTube)                                            | 📦 Download Release APK |
 |:------------------------------------------------------------------------------------------------------------:| :---: |
-|                        [Video Demo](https://youtu.be/Rg8yU2-wA2U?si=tAWTuWHw1x9WR1Rp)                        | [**Download Roomie v1.0.0**](https://github.com/mulyadelani/Roomie/releases) |
+|                        [Video Demo](https://youtu.be/Rg8yU2-wA2U?si=tAWTuWHw1x9WR1Rp)                        | [**Download Roomie v1.0.0**](https://drive.google.com/file/d/1_bYvw1E3ATRCLZ8p97we0jlfcCL6ZR8q/view?usp=sharing) |
 
 
 
@@ -30,15 +30,37 @@ Aplikasi ini dibangun menggunakan **Kotlin Multiplatform (KMP)** dan **Compose M
 | :---: | :---: | :---: |
 | <img src="screenshot/lapor kerusakan.jpeg" width="200" /> | <img src="screenshot/notifikasi.jpeg" width="200" /> | <img src="screenshot/profile pengguna - mahasiswa.jpeg" width="200" /> |
 
+| Bantuan & Support | Detail Jadwal | Informasi Ruangan |
+| :---: | :---: | :---: |
+| <img src="screenshot/bantuan.jpeg" width="200" /> | <img src="screenshot/detail jadwal.jpeg" width="200" /> | <img src="screenshot/informasi ruangan.jpeg" width="200" /> |
+
+| Jadwal Penggunaan | Riwayat Fasilitas | Detail Maintenance |
+| :---: | :---: | :---: |
+| <img src="screenshot/jadwal penggunaan.jpeg" width="200" /> | <img src="screenshot/fasilitas(history).jpeg" width="200" /> | <img src="screenshot/maintenance detail.jpeg" width="200" /> |
+
+| Status: Booked | Status: Available | Status: Maintenance |
+| :---: | :---: | :---: |
+| <img src="screenshot/informasi ruangan (status booked).jpeg" width="200" /> | <img src="screenshot/informasi ruangan (status available).jpeg" width="200" /> | <img src="screenshot/informasi ruangan (status maintenance).jpeg" width="200" /> |
+
 ### 🛠️ Perspektif Admin (Control Tower)
 
-| Command Center Hub | Gauges Interaktif |
-| :---: | :---: |
-| <img src="screenshot/fasilitas (comman center)-admin.jpeg" width="300" /> | <img src="screenshot/detail command center-admin.jpeg" width="300" /> |
+| Command Center Hub | Gauges Interaktif | Dashboard Lanjutan |
+| :---: | :---: | :---: |
+| <img src="screenshot/fasilitas (comman center)-admin.jpeg" width="200" /> | <img src="screenshot/detail command center-admin.jpeg" width="200" /> | <img src="screenshot/dashboard 2 lanjutan.jpeg" width="200" /> |
 
-| Validasi Laporan | Profil Admin |
-| :---: | :---: |
-| <img src="screenshot/detail laporan masuk.jpeg" width="300" /> | <img src="screenshot/profile - admin.jpeg" width="300" /> |
+| Kontrol Fasilitas | Laporan Masuk | Detail Laporan |
+| :---: | :---: | :---: |
+| <img src="screenshot/fasilitas (kontrol).jpeg" width="200" /> | <img src="screenshot/fasilitas (laporan).jpeg" width="200" /> | <img src="screenshot/detail laporan masuk.jpeg" width="200" /> |
+
+| Validasi Laporan | Profil Admin | Bukti Kerusakan |
+| :---: | :---: | :---: |
+| <img src="screenshot/detail laporan masuk.jpeg" width="200" /> | <img src="screenshot/profile - admin.jpeg" width="200" /> | <img src="screenshot/lapor kerusakan - detail.jpeg" width="200" /> |
+
+### 📅 Detail Ketersediaan Jadwal (Per Lantai)
+
+| Lantai 1 | Lantai 2 | Lantai 3 | Lantai 4 |
+| :---: | :---: | :---: | :---: |
+| <img src="screenshot/detail ketersediaan jadwal ruangan lantai 1.jpeg" width="180" /> | <img src="screenshot/detail ketersediaan jadwal ruangan lantai 2.jpeg" width="180" /> | <img src="screenshot/detail ketersediaan jadwal ruangan lantai 3.jpeg" width="180" /> | <img src="screenshot/detail ketersediaan jadwal ruangan lantai 4.jpeg" width="180" /> |
 
 ---
 
